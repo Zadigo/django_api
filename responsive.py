@@ -1,3 +1,19 @@
+"""This module allows you to implement responsivity within Django
+by detecting if the incoming request comes from mobile.
+
+There are two main functions:
+    - Responsive
+    - Responsive Context Processor
+
+The Responsive class is the main logic that analyzes the request and
+determines if it is a mobile or not.
+
+The Responsive Context Processor is the definition that passes and persists
+the result of the first class into the templates.
+
+author: pendenquejohn@gmail.com
+"""
+
 import re
 
 class Responsive:
