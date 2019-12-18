@@ -6,7 +6,7 @@ Responsive is a context processor for Django templates that detects if the reque
 
 ## Implementing the API
 
-In your settings file, call __from your_project.responsive.responsive_context_processor__ into the list of context processors:
+In your settings file, add the __responsive_context_processor__ into the list of context processors:
 
 ```
 TEMPLATES = [
@@ -19,7 +19,7 @@ TEMPLATES = [
         'OPTIONS': {
             'context_processors': [
                 ...
-                'shop.logic.stripe_context_processors'
+                'your_project.responsive.responsive_context_processor'
             ],
         },
     },
