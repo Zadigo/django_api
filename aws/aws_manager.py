@@ -1,5 +1,5 @@
 """This module regroups a series of classes and utilities that can be useful
-for interacting with AWS (e.g. uploading items...)
+for interacting with AWS within Django (e.g. uploading items...)
 
 Base
 ----
@@ -22,7 +22,7 @@ Utilities
         - aws_url_for
         - unique_path_creator
 
-Pendenque John @ pendenquejohn@gmail.com
+author: pendenquejohn@gmail.com
 """
 
 import os
@@ -34,12 +34,12 @@ import boto3
 SETTINGS = {
     'url': 'https://s3.%s.amazonaws.com/%s/%s',
 
-    'bucket_name': 'jobswebsite',
-    'region_name': 'eu-west-3',
+    'bucket_name': os.environ.get('AWS_BUCKET_NAME'),
+    'region_name': os.environ.get('AWS_REGION_NAME'),
 
     'access_keys': {
-        'secret_key': os.environ.get('AWS_SECRET_ACCESS_KEY'),
-        'access_key': os.environ.get('AWS_ACCESS_KEY_ID')
+        'secret_key': os.environ.get('AWS_SECRET_KEY'),
+        'access_key': os.environ.get('AWS_ACCESS_KEY')
     }
 }
 
@@ -86,7 +86,7 @@ def create_object_url(object_path, region=SETTINGS['region_name'],
     Example link
     ------------
 
-    -https://s3.eu-west-3.amazonaws.com/jobswebsite/banners/object.jpg-
+        https://s3.eu-west-3.amazonaws.com/jobswebsite/banners/object.jpg
     """
     return f'https://s3.{region}.amazonaws.com/{bucket}/{object_path}'
 
@@ -159,6 +159,8 @@ class QueryManager(AWS):
         self.region_name = region_name
 
     def list_bucket(self):
+        """Lists the items withing a bucket
+        """
         return [item for item in self.bucket.objects.all()]
 
     def list_folder(self, folder):
@@ -203,7 +205,16 @@ class TransferManager(AWS):
         self.region_name = region_name
 
     def upload(self, data, subfolder_path, contenttype, **params):
-        """`subfolder_path` is the subfolder to upload the file to
+        """This is the overall definition used to upload objects to
+        a given AWS bucket.
+
+        Parameters
+        ----------
+            data: the content of the file to upload in bytes
+
+            subfolder_path: is the subfolder to upload the file to
+
+            contenttype: the content disposition of the file e.g. application/jpg
         """
         base_params = {
             'Bucket': self.bucket_name,
@@ -224,8 +235,19 @@ class TransferManager(AWS):
         else:
             return response
     
-    def upload_from_local(self, file_to_upload, model=None, request=None):
+    def upload_from_local(self, file_to_upload, upload_to, model=None, request=None):
         """Uploads a file from a local path
+
+        Parameters
+        ----------
+
+            file_to_upload: the absolute path of the file to upload
+
+            upload_to: path in your AWS bucket in which to upload the file
+            e.g. path/to/folder
+
+            model: if you need to save items to a Django model after upload,
+            then pass your model here
         """
         is_local_file = os.path.isfile(file_to_upload)
         if is_local_file:
@@ -243,7 +265,8 @@ class TransferManager(AWS):
             with open(file_to_upload, 'rb') as f:
                 data = f.read()
                 # Create the unique path for the file
-                path = unique_path_creator('nawoka/shop', item_name)
+                # within the subfolder
+                path = unique_path_creator(upload_to, item_name)
                 response = self.upload(data, path['object_path'], contenttype[0])
             return response
 
@@ -270,27 +293,24 @@ class TransferManager(AWS):
                 print('[AWS MANAGER] : File uploaded. (%s)' % complete_path)
             return response
 
+    def delete_object(self, aws_path):        
+        return self.client.delete_object(aws_path)
 
 
-
-# bucket_name = 'jobswebsite'
-# access_key = 'AKIAJQZHLNUQVX7Q5QFA'
-# secret_key = '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'
+# bucket_name = 'mybusinesses'
+# access_key = 'AKIAZP4QDMZRKNE6VASE'
+# secret_key = '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'
 # region_name = 'eu-west-3'
 
-bucket_name = SETTINGS.get('bucket_name')
-region_name = SETTINGS.get('region_name')
-access_key = SETTINGS.get('access_keys')['access_key']
-secret_key = SETTINGS.get('access_keys')['secret_key']
-
-q = QueryManager(bucket_name, access_key, secret_key, region_name)
+# query = QueryManager(bucket_name, access_key, secret_key, region_name)
+# print(query.list_folder('nawoka/products'))
 # s.get_file_url('test', '3e7e208c6a3b27df0ca556e0f5d1207748e3f277/sophie.jpg')
 # items = q.list_folder_urls('nawoka/shop')
 # print(list(items))
 
-# path='C:\\Users\\Zadigo\\Pictures\\nawoka\\shop\\chain_crystal1.webp'
+# path='C:\\Users\\Pende\\Pictures\\taylor.png'
 # t = TransferManager(bucket_name, access_key, secret_key, region_name)
-# t.upload_from_local(path)
+# t.upload_from_local(path, 'nawoka/products')
 
 # path = 'C:\\Users\\Zadigo\\Pictures\\nawoka\\shop\\chain_crystal4.webp'
 # t = TransferManager(bucket_name, access_key, secret_key, region_name)
