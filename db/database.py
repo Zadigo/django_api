@@ -1,19 +1,33 @@
 import json
 import secrets
 import datetime
-from db.functions import Functions
+from django_api.db.functions import Functions
+from django_api.db.errors import SchemaError
+from django_api.db.decorators import database_cache
 
 PATH = 'C:\\Users\\Pende\\Documents\\myapps\\django_api\\db\\database.json'
 
-# Other functions
-def database_cache(func):
-    def load_database(self, path_or_url=None, **kwargs):
-        """Opens the database and returns a cached version
-        of the data that it contains
-        """
-        cached_data = func(self)
-        return cached_data
-    return load_database
+class QuerySet(Functions):
+    def __init__(self, data):
+        pass
+
+    def values(self):
+        pass
+
+    def limit(self, n):
+        pass
+
+    def count(self):
+        """Return the number of items in the database"""
+        return len(self.values())
+
+    def last(self):
+        """Return the last item of the queryset"""
+        pass
+
+    def first(self):
+        """Return the first item of the queryset"""
+        pass
 
 class Manager(Functions):
     def __init__(self, data=None):
@@ -21,12 +35,27 @@ class Manager(Functions):
 
     def insert(self, **kwargs):
         pass
+    
+    def _all(self):
+        return self.db_data
 
-    def get(self, **kwargs):
-        return self.iterator(**kwargs)
+    def include(self, **query):
+        pass
+
+    def exclude(self, **query):
+        pass
+
+    def get(self, **query):
+        """Get a single item from the database
+        """
+        if 'id' in query:
+            return self.get_by_id(int(query['id']))
+        return self.iterator(**query)
 
     def get_or_create(self, **kwargs):
-        pass
+        available_fields = self.available_keys()
+        base_structure = dict()
+        base_structure.update({available_field for available_field in available_fields})
 
     def filter(self, **kwargs):
         pass
@@ -44,19 +73,23 @@ class Manager(Functions):
         pass
 
     def values(self, *only):
-        return [data for data in test_data.values()]
+        """Return the items of the database as an array of dictionnaries"""
+        return [data for data in self.db_data.values()]
 
     @classmethod
     def limit(cls, n, **kwargs):
         return cls.filter(**kwargs)[:n]
 
     def first(self):
+        """Return the first value of the database"""
         return self.values()[0]
 
     def last(self):
+        """Return the last value of the database"""
         return self.values()[-1]
 
     def count(self):
+        """Return the number of items in the database"""
         return len(self.values())
 
     @classmethod
@@ -66,10 +99,7 @@ class Manager(Functions):
         """
         return cls(data=data)
 
-class QuerySet(Functions):
-    pass
-
-class Database(QuerySet):
+class Database(Functions):
     """You can either create a database directly by using this class
     or by subclassing the Models class.
 
@@ -194,10 +224,12 @@ class Database(QuerySet):
 
     @staticmethod
     def set_date():
+        """Get the current date as a timestamp"""
         return datetime.datetime.now().timestamp()
 
     @staticmethod
     def calculate_version(n):
+        """Bump the current database version by one"""
         return n + 1
 
     def clean(self, **kwargs):
@@ -205,221 +237,3 @@ class Database(QuerySet):
         to the database in order to prevent corruption.
         """
         pass
-    
-class Models(Database):
-    """Models are a way of structuring the logic of your database
-    efficiently using class methods.
-
-    Description
-    -----------
-
-        class FashionModels(Models):
-            pass
-    """
-    pass
-
-
-
-# Testing
-# database = Database()
-# database.breakdown(name='Kendall')
-# database.breakdown(name='Kendall', location__contains='Kendall', name__age__eq=15)
-
-
-# def age_validator(n):
-#     if n == 22:
-#         raise Exception()
-#     return n
-
-# class Fashion(Models):
-#     name = CharField(max_length=34, verbose_name='Name')
-#     age = PositiveIntegerField(minimum=18, maximum=34)
-#     description = TextField(54)
-#     created_on = DateField()
-
-# mymodel = Fashion()
-# print(mymodel.create_database())
-
-# Functions
-# functions = Functions()
-# functions.breakdown(name='Kendall')
-
-
-from itertools import dropwhile, filterfalse, takewhile
-
-database = Database(path_or_url=PATH)
-test_data = database.db_data
-
-special_words = ['eq', 'gt', 'gte', 'lt', 'lte', 
-                    'ne', 'contains', 'icontains']
-# An array containing all
-# the searched keys in a query
-keys_dict = []
-searched_values = []
-
-# Now we can seperate the keys from
-# the search values so that we have
-# two independent arrays from one another
-# query = {'name': 'Kendall', 'location__country': 'USA'}
-# query = {'location__country': 'USA'}
-query = {'age__eq': 26}
-for key, value in query.items():
-    keys_dict.append(key)
-    searched_values.append(value)
-
-# Decompose the data into an
-# array containing the dicts
-# without their primary keys
-# in order to faciliate iteration
-data = [data for data in test_data.values()]
-
-def comparator(a, b, special_word='exact'):
-    """A definition used to compare two given values
-    and returns True or False.
-
-    Parameters:
-
-        a: the reference value to compare
-
-        b: the value the user wants to compare to a
-
-        special_word: the filter word to use to make the comparision
-    """
-    if special_word == 'exact' or special_word == 'eq':
-        return a == b
-
-    if special_word == 'gt':
-        return a > b
-
-    if special_word == 'gte':
-        return a >= b
-
-    if special_word == 'lt':
-        return a < b
-
-    if special_word == 'lte':
-        return a <= b
-
-    if special_word == 'contains':
-        return a in b
-
-def right_hand_filter(f, sub_dict):
-    """A special function that takes the extended
-    queries in order to transform them into a logic
-    that can filter the data from the database
-
-    Description
-    -----------
-
-        {location: {country: USA}}
-
-        Suppose we have 'location__country' as query to
-        get USA in the dict above. In which case, the definition
-        will split the paramaters to get the specific value.
-
-    Parameters
-    ----------
-
-        f: a filter such as something__a or something__a__b
-
-        sub_dict: a subdictionnary that we want to filter
-    """
-    splitted_values = f.split('__', 5)
-    number_of_keys = len(splitted_values)
-
-    # We iterate over each keyword
-    # using the index. At each iteration,
-    # we get +1 depth into the dict we
-    # are trying to filter
-    for i in range(0, number_of_keys):
-        key = splitted_values[i]
-        if key not in special_words:
-            # We know that it is a 
-            # dictionnary key
-            try:
-                # If the subdict is a dict or is still
-                # a dict then we can keep going
-                # +1 in depth
-                if isinstance(sub_dict, dict):
-                    sub_dict = sub_dict[key]
-                else:
-                    # Otherwise, there's nothing to
-                    # query anymore and we can raise an
-                    # error since the additional depth
-                    # does not exist
-                    raise KeyError()
-            except KeyError:
-                # If the key is not present,
-                # we can raise an error here
-                if key not in special_words:
-                    raise
-    # If everything went well,
-    # we should have got the
-    # value that we were looking for
-    return sub_dict
-
-def iterator():
-    """This definition iterates over each dict in the data
-    that we wish to filter and then operates somekind of
-    logic in order to extract the elements
-    """
-    comparator_results = []
-    filtered_items = []
-    number_of_values_to_search = len(searched_values)
-    position = 0
-    # This section iterates over both
-    # arrays in order to filter the data
-    for item in data:
-        for key in keys_dict:
-            searched_value = searched_values[position]
-            try:
-                no_underscore = item[key]
-                # There are cases where the user might
-                # query a specific section of the dict
-                # that will return a dict instead of a
-                # value. In which case, we need to deal
-                # with that by informing him that the
-                # result is a dictionnary that needs to
-                # be queried again or not (?)
-
-                # Another solution is to return all the
-                # subdictionnaries with that keyword
-                if isinstance(no_underscore, dict):
-                    filtered_items.append(item[key])
-            except KeyError:
-                no_underscore = None
-                # If the key contains a double
-                # underscore we need to separate
-                # the key from special keyword
-                with_underscore = right_hand_filter(key, item)
-
-            # If we have a match,
-            # we can return the item
-            # if e == searched_value:
-            #     yield item
-            g = no_underscore or with_underscore
-            # We have to refilter the item that we
-            # just got using this time the other filter.
-            # This is useful for cases where we have
-            # multiple filters -- for that, we gather
-            # the comparators results and then perform
-            # an all() on the results
-            comparator_results.append(comparator(g, searched_value, special_word='exact'))
-            position = position + 1
-            # In order for the cursor to always iterate
-            # between the 0 and the max amount of values
-            # that the user wants to search, we have to
-            # reset it
-            if position >= number_of_values_to_search:
-                position = 0
-
-        if all(comparator_results):
-            filtered_items.append(item)
-    return filtered_items
-
-# print(iterator())
-# print(right_hand_filter('location__address__number', {'location': {'country': 'USA', 'city': 'Florida', 'address': {'number': 1}}}))
-# print(comparator('Paris', 'Kendall Jenner', special_word='contains'))
-# print(iterator())
-# print(iterator())
-# print(Models().available_keys())

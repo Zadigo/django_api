@@ -1,19 +1,79 @@
+from collections import OrderedDict, namedtuple
+from itertools import takewhile, dropwhile, filterfalse
+from django_api.db.errors import SubDictError, ItemExistError
+
 class Functions:
-    db_data = []
+    """This class regroups all the given logic in order transform filters
+    into usable pieces of logic for filtering data withing your database.
+    """
+    db_data = dict()
     special_words = ['eq', 'gt', 'gte', 'lt', 'lte', 
                         'ne', 'contains', 'icontains', 'exact', 'iexact']
     keys_dict = []
     searched_values = []
+
+    @property
+    def last_item_id(self):
+        """Get the last items' iD in the data
+        """
+        return int(list(self.db_data.keys())[-1])
+
+    @property
+    def auto_increment_last_id(self):
+        return self.last_item_id + 1
+
+    def transform_data(self, data:dict=None):
+        """Transforms the data from the database into an array
+        containing a series of dictionnaries.
+
+        Example
+        -------
+
+            1: {
+                a: b
+                c: d
+            }
+            
+            By transforming the data, we can obtain the following:
+
+                [{a: b}, {c: d}]
+        """ 
+        return [single_item for single_item in self.db_data.values()]
     
-    def decompose(self, query):
+    def decompose(self, **query):
+        """Decomposes a query from its parameters
+
+        Description
+        -----------
+
+            Queries are dictionnaries composed of their keys and parameters:
+
+                {'name': 'Kendall', 'location__country': 'USA'}
+            
+            By decomposing the dict, we get two separate arrays, one containing
+            only the keys, the other, the searched values:
+
+                [name, location__country]
+
+                [Kendall, USA]
+
+        Parameters
+        ----------
+
+            query: is keyword arguments
+
+        Result
+        ------
+
+            decompose() returns the length of the keys_dict
+        """
         # Now we can seperate the keys from
         # the search values so that we have
         # two independent arrays from one another
-        # query = {'name': 'Kendall', 'location__country': 'USA'}
-        # query = {'location__country': 'USA'}
         for key, value in query.items():
             self.keys_dict.append(key)
             self.searched_values.append(value)
+        return len(self.keys_dict)
 
     def available_keys(self, check_key=None):
         """Returns the list of available keys that can
@@ -67,6 +127,13 @@ class Functions:
 
             sub_dict: a subdictionnary that we want to filter
         """
+        # We split the filters up to depth
+        # of five so that we can query the
+        # dictionnary as deep as the user wants
+
+        # We also know that the final filter
+        # (if there is one), can be a special
+        # keyword
         splitted_values = f.split('__', 5)
         number_of_keys = len(splitted_values)
 
@@ -81,8 +148,7 @@ class Functions:
                 # dictionnary key
                 try:
                     # If the subdict is a dict or is still
-                    # a dict then we can keep going
-                    # +1 in depth
+                    # a dict then we can keep going +1 in depth
                     if isinstance(sub_dict, dict):
                         sub_dict = sub_dict[key]
                     else:
@@ -95,6 +161,7 @@ class Functions:
                     # If the key is not present,
                     # we can raise an error here
                     if key not in self.special_words:
+                        print('Available keys are: %s' % self.available_keys())
                         raise
         # If everything went well,
         # we should have got the
@@ -131,36 +198,77 @@ class Functions:
         if special_word == 'contains':
             return a in b
 
-    def iterator(self, query=None):
-        """This definition iterates over each dict in the data
-        that we wish to filter and then operates somekind of
-        logic in order to extract the elements
+    def iterator(self, **query):
+        """This definition iterates over each dict from the data
+        that we wish to filter and then operates triggers a logic in order
+        to extract each element accordingly.
+
+        Result
+        ------
+
+            Suppose we the following data with the constraint that name should be Kendall:
+
+                [
+                    {
+                        name: Kendall,
+                        location: {
+                            country: USA,
+                            city: Florida
+                        }
+                    },
+                    {
+                        name: Hailey,
+                        location: {
+                            country: USA,
+                            city: Florida
+                        }
+                    }
+                ]
+
+            The final result would be:
+
+                [
+                    {
+                        name: Kendall,
+                        location: {
+                            country: USA,
+                            city: Florida
+                        }
+                    }
+                ]
         """
-        self.decompose(query)
+        number_of_filters = self.decompose(**query)
 
         comparator_results = []
         filtered_items = []
         number_of_values_to_search = len(self.searched_values)
         position = 0
+        data = self.transform_data()
+
         # This section iterates over both
         # arrays in order to filter the data
-        for item in self.db_data:
+        for item in data:
             for key in self.keys_dict:
                 searched_value = self.searched_values[position]
                 try:
                     no_underscore = item[key]
-                    # There are cases where the user might
-                    # query a specific section of the dict
-                    # that will return a dict instead of a
-                    # value. In which case, we need to deal
-                    # with that by informing him that the
-                    # result is a dictionnary that needs to
-                    # be queried again or not (?)
+                    # There are cases where we might not have reached
+                    # the full depth of a subdictionnary.
 
-                    # Another solution is to return all the
-                    # subdictionnaries with that keyword
+                    # For example suppopse we have this:
+                    # {a: b, c: {d: e}} and the user queries
+                    # .get(c=something). In such a case, we
+                    # can see that the user did not query a
+                    # a specific key from the subdict (c).
+
+                    # This results in the return value
+                    # being a subdict.
+
+                    # Therefore, we just append the
+                    # subdict into the filtered items(?)
                     if isinstance(no_underscore, dict):
-                        filtered_items.append(item[key])
+                        # filtered_items.append(item[key])
+                        raise  SubDictError(key, item[key])
                 except KeyError:
                     no_underscore = None
                     # If the key contains a double
@@ -168,40 +276,54 @@ class Functions:
                     # the key from special keyword
                     with_underscore = self.right_hand_filter(key, item)
 
-                # If we have a match,
-                # we can return the item
-                # if e == searched_value:
-                #     yield item
                 g = no_underscore or with_underscore
-                # We have to refilter the item that we
-                # just got using this time the other filter.
-                # This is useful for cases where we have
-                # multiple filters -- for that, we gather
-                # the comparators results and then perform
-                # an all() on the results
-                comparator_results.append(self.comparator(g, searched_value, special_word='exact'))
+
+                if number_of_filters == 1:
+                    # This logic is specific to cases where
+                    # we only have one filter
+                    return_value = self.comparator(g, searched_value)
+                    if return_value is True:
+                        filtered_items.append(item)
+                elif number_of_filters > 1:
+                    # This logic works for cases where we have
+                    # multiple filters. It's like applying an AND
+                    # operator in an SQL statement.
+                    # The logic is to get all the booleans in an array
+                    # and to apply an all() function that will determine
+                    # if the item needs to be appended or not
+                    comparator_results.append(self.comparator(g, searched_value))
+
                 position = position + 1
                 # In order for the cursor to always iterate
                 # between the 0 and the max amount of values
-                # that the user wants to search, we have to
-                # reset it
+                # that the user wants to search, we have to reset it
                 if position >= number_of_values_to_search:
                     position = 0
 
-            if all(comparator_results):
+            # This is the section with the all() function that
+            # determines if everythong is TRUE in order to append
+            # the item in the array or not
+            if number_of_filters > 1 and all(comparator_results):
                 filtered_items.append(item)
         return filtered_items
 
-class Operators:
-    def __init__(self, **kwargs):
-        self.query = kwargs
+    def get_by_id(self, reference_or_id:int):
+        """Return an item from the database that corresponds exactly
+        to the given id
+        """
+        try:
+            item = self.db_data[str(reference_or_id)]
+        except:
+            raise ItemExistError(reference_or_id)
+        else:
+            return item
 
-    def __repr__(self):
-        return f'{self.__class__.__name__}({self.query})'
-
-class Where(Operators):
-    def __init__(self, condition=None, **kwargs):
-        super().__init__(**kwargs)
-
-class Or(Operators):
-    pass
+    def filter_by_ids(self, ids:list):
+        """From a list of ids, return a list of items that
+        corresponds to the given ids
+        """
+        all_ids = list(self.db_data.keys())
+        for all_id in all_ids:
+            for element_id in ids:
+                if all_id == element_id:
+                    yield self.db_data[element_id]
