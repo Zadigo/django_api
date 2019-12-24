@@ -2,102 +2,11 @@ import json
 import secrets
 import datetime
 from django_api.db.functions import Functions
-from django_api.db.errors import SchemaError
+from django_api.db.errors import SchemaError, DatabaseError
 from django_api.db.decorators import database_cache
-
-PATH = 'C:\\Users\\Pende\\Documents\\myapps\\django_api\\db\\database.json'
-
-class QuerySet(Functions):
-    def __init__(self, data):
-        pass
-
-    def values(self):
-        pass
-
-    def limit(self, n):
-        pass
-
-    def count(self):
-        """Return the number of items in the database"""
-        return len(self.values())
-
-    def last(self):
-        """Return the last item of the queryset"""
-        pass
-
-    def first(self):
-        """Return the first item of the queryset"""
-        pass
-
-class Manager(Functions):
-    def __init__(self, data=None):
-        self.db_data = data
-
-    def insert(self, **kwargs):
-        pass
-    
-    def _all(self):
-        return self.db_data
-
-    def include(self, **query):
-        pass
-
-    def exclude(self, **query):
-        pass
-
-    def get(self, **query):
-        """Get a single item from the database
-        """
-        if 'id' in query:
-            return self.get_by_id(int(query['id']))
-        return self.iterator(**query)
-
-    def get_or_create(self, **kwargs):
-        available_fields = self.available_keys()
-        base_structure = dict()
-        base_structure.update({available_field for available_field in available_fields})
-
-    def filter(self, **kwargs):
-        pass
-
-    def update(self, **kwargs):
-        pass
-
-    def update_or_create(self, **kwargs):
-        pass
-
-    def delete(self, **kwargs):
-        pass
-
-    def select_related(self, *keys):
-        pass
-
-    def values(self, *only):
-        """Return the items of the database as an array of dictionnaries"""
-        return [data for data in self.db_data.values()]
-
-    @classmethod
-    def limit(cls, n, **kwargs):
-        return cls.filter(**kwargs)[:n]
-
-    def first(self):
-        """Return the first value of the database"""
-        return self.values()[0]
-
-    def last(self):
-        """Return the last value of the database"""
-        return self.values()[-1]
-
-    def count(self):
-        """Return the number of items in the database"""
-        return len(self.values())
-
-    @classmethod
-    def as_manager(cls, data=None):
-        """Instantiates the manager once again and
-        returns the class
-        """
-        return cls(data=data)
+from django_api.db.managers import Manager
+from django_api.db.queryset import QuerySet
+import os
 
 class Database(Functions):
     """You can either create a database directly by using this class
@@ -120,14 +29,23 @@ class Database(Functions):
             This process can be facilitated by using the Fields classes such as
             IntegerField, CharField etc.
     """
-    def __init__(self, **kwargs):
-        if 'path_or_url' in kwargs:
-            # We have to load the database
-            db_data = self.load_database(kwargs['path_or_url'])['data']
-            self.db_data = db_data
-            self.manager = Manager(data=db_data)
+    def __init__(self, path_or_url=None, **kwargs):
+        self.path_or_url = path_or_url
+        self.kwargs = kwargs
 
-    def create_database(self, name, fields, **kwargs):
+        if self.path_or_url:
+            path_exists = os.path.exists(path_or_url)
+            if not path_exists:
+                pass
+            else:
+                db_data = self.load_database(path_or_url)
+
+            self.db_name = os.path.basename(path_or_url)
+            self.db_data = db_data['data']
+            # Manager for interracting with the database
+            self.manager = Manager(data=self.db_data)
+
+    def create(self, name, models:list, fields:list, **kwargs):
         """A definition that can create a database outside of
         of a class based structure.
 
@@ -143,18 +61,14 @@ class Database(Functions):
             Fields: they can be either string values or Field classes that
             we be converted accordingly for the database
         """
-        # Then we can migrate the database
-        self.migrate(model=name)
-        pass
+        if self.path_or_url:
+            raise DatabaseError('You are trying to both load and create a database at the same time.' 
+                ' If you wish to create a new database, do not use path_or_url')
 
     def migrate(self, **kwargs):
         """Creates a new version of the database by changing the
         modified_on and increasing the version of the schema
         """
-        # current_data = self.load_database()
-        # Increase the version of the database
-        # current_data['$version'] = self.calculate_version(current_data['$version'])
-        # return self.save(data=current_data)
         pass
 
     @classmethod
@@ -182,22 +96,34 @@ class Database(Functions):
                 json.dump(data , f, indent=4, sort_keys=True)
             return cls
 
-    @database_cache
-    def load_database(self):
+    def load_database(self, path_or_url):
         """A simple function that opens the local database
         to retrieve all the data that it contains
         """
-        with open(PATH, 'r', encoding='utf-8') as f:
+        with open(path_or_url, 'r', encoding='utf-8') as f:
             data = json.load(f)
         return self.check_schema(data)
 
     def refresh_from_database(self):
         pass
+    
+    def check_kwargs(self, **kwargs):
+        return kwargs
 
     def check_schema(self, data):
-        # The database should have a unique
-        # schema identifier for keeping track
-        # of the database versions
+        """This function is called everytime the database is loaded in order
+        to check for the integrity of the database we are going to work with.
+
+        Description
+        -----------
+
+            It checks of the presence of the following fields:
+                - iD
+                - Created_on
+                - Version
+
+            The presence of certain fields can raise an error or not
+        """
         if '$id' not in data:
             raise SchemaError('We could not find the required key $id in the schema of your database')
         else:
@@ -221,7 +147,7 @@ class Database(Functions):
             if data['$version'] == None or data['$version'] == '':
                 data['$created_on'] = 0
         return data
-
+    
     @staticmethod
     def set_date():
         """Get the current date as a timestamp"""
@@ -237,3 +163,15 @@ class Database(Functions):
         to the database in order to prevent corruption.
         """
         pass
+    
+class Models(Database):
+    """Models are a way of structuring the logic of your database
+    efficiently using class methods.
+
+    Description
+    -----------
+
+        class FashionModels(Models):
+            pass
+    """
+    pass

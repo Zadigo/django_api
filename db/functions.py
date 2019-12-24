@@ -1,6 +1,6 @@
 from collections import OrderedDict, namedtuple
 from itertools import takewhile, dropwhile, filterfalse
-from django_api.db.errors import SubDictError, ItemExistError
+from django_api.db.errors import SubDictError, ItemExistError, keyExistError
 
 class Functions:
     """This class regroups all the given logic in order transform filters
@@ -127,6 +127,7 @@ class Functions:
 
             sub_dict: a subdictionnary that we want to filter
         """
+        special_word = None
         # We split the filters up to depth
         # of five so that we can query the
         # dictionnary as deep as the user wants
@@ -156,17 +157,21 @@ class Functions:
                         # query anymore and we can raise an
                         # error since the additional depth
                         # does not exist
-                        raise KeyError()
+                        raise keyExistError(key, self.available_keys())
                 except KeyError:
                     # If the key is not present,
                     # we can raise an error here
                     if key not in self.special_words:
                         print('Available keys are: %s' % self.available_keys())
                         raise
+            else:
+                # Pass the special keyword
+                # filter for the comparator
+                special_word = key
         # If everything went well,
         # we should have got the
         # value that we were looking for
-        return sub_dict
+        return sub_dict, special_word
 
     def comparator(self, a, b, special_word='exact'):
         """A definition used to compare two given values
@@ -195,8 +200,11 @@ class Functions:
         if special_word == 'lte':
             return a <= b
 
+        if special_word == 'ne':
+            return a != b
+
         if special_word == 'contains':
-            return a in b
+            return b in a
 
     def iterator(self, **query):
         """This definition iterates over each dict from the data
@@ -237,6 +245,7 @@ class Functions:
                     }
                 ]
         """
+        special_word = 'exact'
         number_of_filters = self.decompose(**query)
 
         comparator_results = []
@@ -274,14 +283,16 @@ class Functions:
                     # If the key contains a double
                     # underscore we need to separate
                     # the key from special keyword
-                    with_underscore = self.right_hand_filter(key, item)
+                    result = self.right_hand_filter(key, item)
+                    with_underscore = result[0]
+                    special_word = result[1]
 
                 g = no_underscore or with_underscore
 
                 if number_of_filters == 1:
                     # This logic is specific to cases where
                     # we only have one filter
-                    return_value = self.comparator(g, searched_value)
+                    return_value = self.comparator(g, searched_value, special_word=special_word)
                     if return_value is True:
                         filtered_items.append(item)
                 elif number_of_filters > 1:
@@ -322,7 +333,6 @@ class Functions:
         """From a list of ids, return a list of items that
         corresponds to the given ids
         """
-        all_ids = list(self.db_data.keys())
         for all_id in all_ids:
             for element_id in ids:
                 if all_id == element_id:

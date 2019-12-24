@@ -18,6 +18,11 @@ class FilterError(DatabaseError):
     def __init__(self, f):
         self.message = message
 
+class keyExistError(DatabaseError):
+    """A specific error for when a key the user tries to query does not exist"""
+    def __init__(self, key, keys):
+        self.message = 'The key (%s) that you are trying to get does not exist. Available keys are: %s' % (key, keys)
+
 class ItemExistError(DatabaseError):
     """An error for when an item does not exist in the database"""
     def __init__(self, reference):
