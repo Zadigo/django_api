@@ -70,7 +70,7 @@ def object_size_creator(image_or_path):
 
     return images_size
 
-def create_object_url(object_path, region=SETTINGS['region_name'], 
+def object_bucket_url(object_path, region=SETTINGS['region_name'], 
                         bucket=SETTINGS['bucket_name']):
     """
     Create a base url for an object that was previously
@@ -134,7 +134,7 @@ def unique_path_creator(folder, filename, rename=False):
     object_path = '%s/%s/%s.%s' % (folder, unique_entry, name, extension)
     # Create the objet's URL to save to a database for example
     # FIXME: Find a way to pass the bucket and the region
-    object_url = create_object_url(object_path)
+    object_url = object_bucket_url(object_path)
     
     return {'object_name': [name, guess_type(filename)], 'object_path': object_path, 
                 'object_url': object_url, 'unique_entry': unique_entry}
@@ -194,7 +194,7 @@ class QueryManager(AWS):
         """
         items = self.list_folder(folder)
         for item in items:
-            yield create_object_url(item[0], self.region_name, self.bucket_name)
+            yield object_bucket_url(item[0], self.region_name, self.bucket_name)
 
 class TransferManager(AWS):
     def __init__(self, bucket_name, access_key, secret_key, region_name):
@@ -268,10 +268,11 @@ class TransferManager(AWS):
                 # within the subfolder
                 path = unique_path_creator(upload_to, item_name)
                 response = self.upload(data, path['object_path'], contenttype[0])
-            return response
+            return {'key': path['unique_entry'], 'response': response}
 
     def local_to_existing(self, file_to_upload, aws_path):
-        """Upload a file to an existing folder path
+        """Upload a file to an existing folder path. Note that the
+        definition automatically guesses the name of the file.
         """
         is_local_file = os.path.isfile(file_to_upload)
         if is_local_file:
@@ -293,14 +294,19 @@ class TransferManager(AWS):
                 print('[AWS MANAGER] : File uploaded. (%s)' % complete_path)
             return response
 
-    def delete_object(self, aws_path):        
-        return self.client.delete_object(aws_path)
+    # def delete_object(self, aws_path):        
+    #     return self.client.delete_object(aws_path)
 
+    # def upload_to_model(self, file_to_upload, model, **kwargs):
+    #     if isinstance(model, type):
+    #         obj = model.objects.create(**kwargs)
+    #         return obj
+    #     self.upload_from_local(file_to_upload, upload_to)
 
-# bucket_name = 'mybusinesses'
-# access_key = 'AKIAZP4QDMZRKNE6VASE'
-# secret_key = '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'
-# region_name = 'eu-west-3'
+bucket_name = 'mybusinesses'
+access_key = 'AKIAZP4QDMZRKNE6VASE'
+secret_key = '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'
+region_name = 'eu-west-3'
 
 # query = QueryManager(bucket_name, access_key, secret_key, region_name)
 # print(query.list_folder('nawoka/products'))
@@ -308,10 +314,11 @@ class TransferManager(AWS):
 # items = q.list_folder_urls('nawoka/shop')
 # print(list(items))
 
-# path='C:\\Users\\Pende\\Pictures\\taylor.png'
-# t = TransferManager(bucket_name, access_key, secret_key, region_name)
-# t.upload_from_local(path, 'nawoka/products')
-
+path='C:\\Users\\Pende\\Downloads\\montre_doree1.jpg'
+t = TransferManager(bucket_name, access_key, secret_key, region_name)
+# r = t.upload_from_local(path, 'nawoka/products')
+t.local_to_existing(path, 'nawoka/products/e722e2b86069b4540dea62a5ad18dcd445c0f502')
 # path = 'C:\\Users\\Zadigo\\Pictures\\nawoka\\shop\\chain_crystal4.webp'
 # t = TransferManager(bucket_name, access_key, secret_key, region_name)
 # t.local_to_existing(path, 'nawoka/shop/85683d41a91f84cbea6e45b1229931014474a693')
+# print(r)
