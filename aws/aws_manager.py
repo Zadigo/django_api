@@ -70,8 +70,7 @@ def object_size_creator(image_or_path):
 
     return images_size
 
-def object_bucket_url(object_path, region=SETTINGS['region_name'], 
-                        bucket=SETTINGS['bucket_name']):
+def object_bucket_url(object_path, region=SETTINGS['region_name'], bucket=SETTINGS['bucket_name']):
     """
     Create a base url for an object that was previously
     created in a bucket in order to save it to a local
@@ -294,31 +293,11 @@ class TransferManager(AWS):
                 print('[AWS MANAGER] : File uploaded. (%s)' % complete_path)
             return response
 
-    # def delete_object(self, aws_path):        
-    #     return self.client.delete_object(aws_path)
+    def delete_object(self, aws_path):        
+        return self.client.delete_object(aws_path)
 
     # def upload_to_model(self, file_to_upload, model, **kwargs):
     #     if isinstance(model, type):
     #         obj = model.objects.create(**kwargs)
     #         return obj
     #     self.upload_from_local(file_to_upload, upload_to)
-
-bucket_name = 'mybusinesses'
-access_key = 'AKIAZP4QDMZRKNE6VASE'
-secret_key = '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'
-region_name = 'eu-west-3'
-
-# query = QueryManager(bucket_name, access_key, secret_key, region_name)
-# print(query.list_folder('nawoka/products'))
-# s.get_file_url('test', '3e7e208c6a3b27df0ca556e0f5d1207748e3f277/sophie.jpg')
-# items = q.list_folder_urls('nawoka/shop')
-# print(list(items))
-
-path='C:\\Users\\Pende\\Downloads\\montre_doree1.jpg'
-t = TransferManager(bucket_name, access_key, secret_key, region_name)
-# r = t.upload_from_local(path, 'nawoka/products')
-t.local_to_existing(path, 'nawoka/products/e722e2b86069b4540dea62a5ad18dcd445c0f502')
-# path = 'C:\\Users\\Zadigo\\Pictures\\nawoka\\shop\\chain_crystal4.webp'
-# t = TransferManager(bucket_name, access_key, secret_key, region_name)
-# t.local_to_existing(path, 'nawoka/shop/85683d41a91f84cbea6e45b1229931014474a693')
-# print(r)

@@ -4,7 +4,6 @@ import socket
 import requests
 from bs4 import BeautifulSoup
 
-
 class IpAnalyzer:
     def __init__(self, request=None):
         # Get the actual IP from the user
@@ -30,3 +29,8 @@ class IpAnalyzer:
     def ip_from_request(request):
         ip = request.META
         return ip
+
+
+import smtplib
+
+a = smtplib.SMTP('', '')

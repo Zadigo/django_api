@@ -1,0 +1,114 @@
+{
+    "kind": "youtube#searchListResponse",
+    "etag": "AknvXW_OCiZ3w6L3IZfgdidjIhc",
+    "nextPageToken": "CBkQAA",
+    "regionCode": "FR",
+    "pageInfo": {
+        "totalResults": 1000000,
+        "resultsPerPage": 25
+    },
+    "items": [
+        {
+            "kind": "youtube#searchResult",
+            "etag": "_he2QU6fiy-Z2asK3aezVq4aLe8",
+            "id": {
+                "kind": "youtube#video",
+                "videoId": "DQq4okYH45I"
+            },
+            "snippet": {
+                "publishedAt": "2017-09-01T15:28:16Z",
+                "channelId": "UCuFFtHWoLl5fauMMD5Ww2jA",
+                "title": "Police dashcam video: &#39;Remember, we only kill black people&#39;",
+                "description": "A police officer was caught on dashcam video saying, 'Remember, we only kill black people' to a driver at a traffic stop in Georgia. The officer has since been ...",
+                "thumbnails": {
+                    "default": {
+                        "url": "https://i.ytimg.com/vi/DQq4okYH45I/default.jpg",
+                        "width": 120,
+                        "height": 90
+                    },
+                    "medium": {
+                        "url": "https://i.ytimg.com/vi/DQq4okYH45I/mqdefault.jpg",
+                        "width": 320,
+                        "height": 180
+                    },
+                    "high": {
+                        "url": "https://i.ytimg.com/vi/DQq4okYH45I/hqdefault.jpg",
+                        "width": 480,
+                        "height": 360
+                    }
+                },
+                "channelTitle": "CBC News",
+                "liveBroadcastContent": "none",
+                "publishTime": "2017-09-01T15:28:16Z"
+            }
+        },
+        {
+            "kind": "youtube#searchResult",
+            "etag": "rgkLddNzUIYAtQG3T5gf6MRb7fw",
+            "id": {
+                "kind": "youtube#video",
+                "videoId": "uN84HhcdIws"
+            },
+            "snippet": {
+                "publishedAt": "2020-06-29T13:00:56Z",
+                "channelId": "UCwWhs_6x42TyRM4Wstoq8HA",
+                "title": "White People Unnecessarily Calling the Cops on Black People | The Daily Show",
+                "description": "From Starbucks to the golf course to dollar stores, White people are unnecessarily calling the cops on Black people. Here's a look back at our coverage.",
+                "thumbnails": {
+                    "default": {
+                        "url": "https://i.ytimg.com/vi/uN84HhcdIws/default.jpg",
+                        "width": 120,
+                        "height": 90
+                    },
+                    "medium": {
+                        "url": "https://i.ytimg.com/vi/uN84HhcdIws/mqdefault.jpg",
+                        "width": 320,
+                        "height": 180
+                    },
+                    "high": {
+                        "url": "https://i.ytimg.com/vi/uN84HhcdIws/hqdefault.jpg",
+                        "width": 480,
+                        "height": 360
+                    }
+                },
+                "channelTitle": "The Daily Show with Trevor Noah",
+                "liveBroadcastContent": "none",
+                "publishTime": "2020-06-29T13:00:56Z"
+            }
+        },
+        {
+            "kind": "youtube#searchResult",
+            "etag": "zPZglF5FqYkDkAV0xWpbSXCG8oc",
+            "id": {
+                "kind": "youtube#video",
+                "videoId": "3LMu2ag0lUc"
+            },
+            "snippet": {
+                "publishedAt": "2018-12-14T21:00:01Z",
+                "channelId": "UCJjSDX-jUChzOEyok9XYRJQ",
+                "title": "Do All Black People Think the Same?",
+                "description": "We brought Black people together to see where they stand on issues related to being black. SUBSCRIBE for more! http://bit.ly/SUBSCRIBEjubilee Note from ...",
+                "thumbnails": {
+                    "default": {
+                        "url": "https://i.ytimg.com/vi/3LMu2ag0lUc/default.jpg",
+                        "width": 120,
+                        "height": 90
+                    },
+                    "medium": {
+                        "url": "https://i.ytimg.com/vi/3LMu2ag0lUc/mqdefault.jpg",
+                        "width": 320,
+                        "height": 180
+                    },
+                    "high": {
+                        "url": "https://i.ytimg.com/vi/3LMu2ag0lUc/hqdefault.jpg",
+                        "width": 480,
+                        "height": 360
+                    }
+                },
+                "channelTitle": "Jubilee",
+                "liveBroadcastContent": "none",
+                "publishTime": "2018-12-14T21:00:01Z"
+            }
+        }
+    ]
+}

@@ -7,6 +7,8 @@ from urllib.parse import urljoin
 from requests.auth import AuthBase
 from requests.sessions import Request, Session
 
+MAILCHIMP_API_KEY = None
+
 
 class QuerySet:
     def __init__(self, category, obj:dict):
@@ -62,6 +64,7 @@ class QuerySet:
             name = item['name'].lower().replace(' ', '_')
             setattr(self, name, item)
 
+
 class ApiKey(AuthBase):
     """Creates a header dict with authentication field for
     authorizing connections with API key
@@ -72,6 +75,7 @@ class ApiKey(AuthBase):
     def __call__(self, h):
         h.headers['Authorization'] = f'auth {self.key}'
         return h
+
 
 class MailChimp:
     """A class that helps interact with the Mailchimp API
@@ -93,15 +97,26 @@ class MailChimp:
         self.session = Session()
         # Create the headers that will be used
         # in relationship wit the request
-        self.headers = {
+        base_headers = {
             'Authorization': f'auth {api_key}',
             'Cache-Control': 'no-cache'
         }
         self.api_key = ApiKey(api_key)
 
         if headers:
-            # Update the headers if necessary
-            self.headers = {**self.headers, **headers}
+            headers = {**base_headers, **headers}
+        self.headers = base_headers
+
+    def prepare_request(self, path, method='GET', data:dict=None):
+        # For whatever reason, the API returns an error 
+        # if 'merged_fields' is not present in the request
+        # body -- if not present, we need to implement it
+        if 'merge_fields' not in data:
+            data.update({'merge_fields': {}})
+
+        request = Request(method=method, url=self.build_url(path), headers=self.headers, json=data)
+        return self.session.prepare_request(request)
+
 
     def get(self, path):
         """Base definition that will be used to send all GET requests
@@ -118,7 +133,7 @@ class MailChimp:
         try:
             response = self.session.send(prepared_request)
         except:
-            raise
+            return None
         else:
             if response.status_code == 200:
                 return response.json()
@@ -231,7 +246,7 @@ class Stores(MailChimp):
     """This class is specific to an ecommerce stores on Mailchimp. They allow for ecommerce platforms
     to create a store that can trigger a different amount of functionalities.
     """
-    def _all(self):
+    def all(self):
         """Get ecommerce stores
         """
         return self.get('ecommerce/stores')
@@ -297,7 +312,7 @@ class Stores(MailChimp):
             a new order in Mailchimp which will create Order notifications in return.
 
             They consists of mails that sent to the customer related to the status of
-            his order. They are triggered but the ``finaancial_status`` field in the data.
+            his order. They are triggered but the ``financial_status`` field in the data.
 
             Note that if the customer does not exist in the store, he will be automatically
             created upon calling this definition.
@@ -382,5 +397,5 @@ class Products(MailChimp):
 
 
 stores = Stores('us15', os.environ.get('MAILCHIMP_API_KEY'))
-items = stores._all()
+items = stores.all()
 print(items)
